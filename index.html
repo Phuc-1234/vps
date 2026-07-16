@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Survivor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div id="ui-layer">
+            <div id="hp-bar-container"><div id="hp-bar"></div></div>
+            <div id="exp-bar-container"><div id="exp-bar"></div></div>
+            <div id="level-display">Level: <span id="level-val">1</span></div>
+        </div>
+
+        <div id="level-up-menu" class="hidden">
+            <h2>LEVEL UP!</h2>
+            <p>Choose your upgrade:</p>
+            <div id="upgrade-choices"></div>
+        </div>
+        
+        <div id="game-over-menu" class="hidden">
+            <h2>GAME OVER</h2>
+            <p>You survived until Level <span id="final-level"></span></p>
+            <button onclick="location.reload()">Try Again</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
