@@ -27,10 +27,10 @@ const stats = {
     
     // Combat
     damage: 10,
-    attackCooldown: 60, // Frames between attacks
+    attackCooldown: 60,
     projectileSpeed: 6,
-    projectiles: 1,      // How many shots per attack
-    pierce: 0,          // How many enemies a bullet goes through before breaking
+    projectiles: 1,      
+    pierce: 0,          
     bulletSize: 4
 };
 
@@ -54,11 +54,8 @@ const upgradePool = [
 
 // --- CORE FUNCTIONS ---
 function spawnEnemy() {
-    // Spawn just outside the screen
     const angle = Math.random() * Math.PI * 2;
     const distance = Math.max(canvas.width, canvas.height) / 2 + 50;
-    
-    // Scale enemy HP with time
     const hpScale = 10 + (frameCount / 600); 
 
     enemies.push({
@@ -71,7 +68,6 @@ function spawnEnemy() {
 function shoot() {
     if (enemies.length === 0) return;
     
-    // Find closest enemy
     let closestDist = Infinity;
     let target = null;
     enemies.forEach(e => {
@@ -81,12 +77,9 @@ function shoot() {
 
     if (!target) return;
 
-    // Calculate base angle
     const angleToTarget = Math.atan2(target.y - player.y, target.x - player.x);
 
-    // Fire based on projectile count
     for (let i = 0; i < stats.projectiles; i++) {
-        // Spread projectiles slightly if there are multiple
         const spread = (stats.projectiles > 1) ? ((i - (stats.projectiles - 1) / 2) * 0.2) : 0;
         
         projectiles.push({
@@ -94,7 +87,8 @@ function shoot() {
             vx: Math.cos(angleToTarget + spread) * stats.projectileSpeed,
             vy: Math.sin(angleToTarget + spread) * stats.projectileSpeed,
             pierceLeft: stats.pierce,
-            hitEnemies: new Set() // Prevent hitting the same enemy twice per frame
+            hitEnemies: new Set(),
+            angle: angleToTarget + spread // Save angle for drawing rotation
         });
     }
 }
@@ -103,7 +97,7 @@ function levelUp() {
     isPaused = true;
     player.level++;
     player.exp -= player.nextExp;
-    player.nextExp = Math.floor(player.nextExp * 1.5); // Exponential requirement
+    player.nextExp = Math.floor(player.nextExp * 1.5); 
 
     document.getElementById('level-val').innerText = player.level;
     document.getElementById('level-up-menu').classList.remove('hidden');
@@ -111,7 +105,6 @@ function levelUp() {
     const choicesDiv = document.getElementById('upgrade-choices');
     choicesDiv.innerHTML = '';
 
-    // Pick 3 random distinct upgrades
     let shuffled = [...upgradePool].sort(() => 0.5 - Math.random());
     let choices = shuffled.slice(0, 3);
 
@@ -124,7 +117,7 @@ function levelUp() {
             document.getElementById('level-up-menu').classList.add('hidden');
             isPaused = false;
             updateUI();
-            loop(); // Resume loop
+            loop(); 
         };
         choicesDiv.appendChild(card);
     });
@@ -150,12 +143,10 @@ function update() {
     let dx = 0, dy = 0;
     if (keys.w) dy -= 1; if (keys.s) dy += 1;
     if (keys.a) dx -= 1; if (keys.d) dx += 1;
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // Normalize diagonal
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } 
     
     player.x += dx * stats.moveSpeed;
     player.y += dy * stats.moveSpeed;
-
-    // Keep player in bounds
     player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
     player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 
@@ -167,14 +158,12 @@ function update() {
 
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
-        // Move towards player
         let angle = Math.atan2(player.y - e.y, player.x - e.x);
         e.x += Math.cos(angle) * e.speed;
         e.y += Math.sin(angle) * e.speed;
 
-        // Hit Player?
         if (Math.hypot(player.x - e.x, player.y - e.y) < player.size + e.size) {
-            player.hp -= 0.5; // Constant damage contact
+            player.hp -= 0.5;
             if (player.hp <= 0) gameOver();
         }
     }
@@ -185,7 +174,6 @@ function update() {
         p.x += p.vx;
         p.y += p.vy;
 
-        // Out of bounds
         if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
             projectiles.splice(i, 1);
             continue;
@@ -193,11 +181,9 @@ function update() {
 
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
-            if (!p.hitEnemies.has(e) && Math.hypot(p.x - e.x, p.y - e.y) < stats.bulletSize + e.size) {
+            if (!p.hitEnemies.has(e) && Math.hypot(p.x - e.x, p.y - e.y) < stats.bulletSize * 1.5 + e.size) {
                 p.hitEnemies.add(e);
                 e.hp -= stats.damage;
-
-                // Simple Damage Number Text
                 damageTexts.push({ x: e.x, y: e.y, text: stats.damage, alpha: 1 });
 
                 if (e.hp <= 0) {
@@ -216,9 +202,7 @@ function update() {
         let g = expGems[i];
         let dist = Math.hypot(player.x - g.x, player.y - g.y);
         
-        // Magnet effect
         if (dist < stats.pickupRadius) {
-            // Move gem to player quickly
             let angle = Math.atan2(player.y - g.y, player.x - g.x);
             g.x += Math.cos(angle) * 8;
             g.y += Math.sin(angle) * 8;
@@ -231,7 +215,7 @@ function update() {
         }
     }
 
-    // 6. Floating Damage Texts fade
+    // 6. Floating Damage Texts
     for (let i = damageTexts.length -1; i >= 0; i--) {
         damageTexts[i].y -= 0.5;
         damageTexts[i].alpha -= 0.02;
@@ -241,42 +225,123 @@ function update() {
     updateUI();
 }
 
+// --- COMPLEX DRAWING LOGIC ---
 function draw() {
-    // Clear screen
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Gems (Small Green Diamonds)
-    ctx.fillStyle = '#44ff44';
+    // 1. Draw EXP Gems (4 Shapes: Base Diamond, Inner Core, Highlight, Shadow)
     expGems.forEach(g => {
-        ctx.beginPath();
-        ctx.arc(g.x, g.y, 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        
+        // Shape 1: Base Diamond
+        ctx.fillStyle = '#118811';
+        ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 0); ctx.lineTo(0, 6); ctx.lineTo(-6, 0); ctx.fill();
+        
+        // Shape 2: Bright Inner Core
+        ctx.fillStyle = '#44ff44';
+        ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(4, 0); ctx.lineTo(0, 4); ctx.lineTo(-4, 0); ctx.fill();
+        
+        // Shape 3: White Highlight (top corner)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(0, -2, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Shape 4: Bottom Shadow Border
+        ctx.strokeStyle = '#003300';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(0, 6); ctx.lineTo(6, 0); ctx.stroke();
+        
+        ctx.restore();
     });
 
-    // Draw Player (Blue Square)
+    // 2. Draw Player (5 Shapes: Chassis, Left Wing, Right Wing, Cockpit, Engine Glow)
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    
+    // Shape 1: Main Chassis
     ctx.fillStyle = '#4444ff';
-    ctx.fillRect(player.x - player.size, player.y - player.size, player.size * 2, player.size * 2);
+    ctx.fillRect(-player.size, -player.size * 0.8, player.size * 2, player.size * 1.6);
+    
+    // Shape 2 & 3: Wings
+    ctx.fillStyle = '#2222bb';
+    ctx.beginPath(); ctx.moveTo(-player.size, -player.size * 0.5); ctx.lineTo(-player.size - 6, player.size); ctx.lineTo(-player.size, player.size); ctx.fill(); // Left Wing
+    ctx.beginPath(); ctx.moveTo(player.size, -player.size * 0.5); ctx.lineTo(player.size + 6, player.size); ctx.lineTo(player.size, player.size); ctx.fill(); // Right Wing
+    
+    // Shape 4: Cockpit Window
+    ctx.fillStyle = '#88ccff';
+    ctx.beginPath(); ctx.arc(0, -player.size * 0.2, player.size * 0.4, 0, Math.PI * 2); ctx.fill();
+    
+    // Shape 5: Engine Thruster Glow (Flickers based on frameCount)
+    ctx.fillStyle = (frameCount % 10 < 5) ? '#ffaa00' : '#ff4400';
+    ctx.beginPath(); ctx.moveTo(-4, player.size * 0.8); ctx.lineTo(0, player.size * 1.5); ctx.lineTo(4, player.size * 0.8); ctx.fill();
+    
+    ctx.restore();
 
-    // Draw Enemies (Red Squares)
-    ctx.fillStyle = '#ff4444';
+    // 3. Draw Enemies (5 Shapes: Body, Left Eye, Right Eye, Mouth, Teeth)
     enemies.forEach(e => {
-        ctx.fillRect(e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
-    });
-
-    // Draw Projectiles (Yellow Circles)
-    ctx.fillStyle = '#ffff44';
-    projectiles.forEach(p => {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        
+        // Shape 1: Monster Body
+        ctx.fillStyle = '#aa2222';
+        ctx.beginPath(); ctx.arc(0, 0, e.size, 0, Math.PI * 2); ctx.fill();
+        
+        // Shape 2 & 3: Red Glowing Eyes
+        ctx.fillStyle = '#ffaaaa';
+        ctx.fillRect(-e.size * 0.5, -e.size * 0.4, e.size * 0.3, e.size * 0.3); // Left Eye
+        ctx.fillRect(e.size * 0.2, -e.size * 0.4, e.size * 0.3, e.size * 0.3); // Right Eye
+        
+        // Shape 4: Dark Mouth
+        ctx.fillStyle = '#330000';
+        ctx.fillRect(-e.size * 0.6, e.size * 0.2, e.size * 1.2, e.size * 0.4);
+        
+        // Shape 5: Sharp Teeth line
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, stats.bulletSize, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-e.size * 0.5, e.size * 0.2);
+        ctx.lineTo(-e.size * 0.2, e.size * 0.5);
+        ctx.lineTo(0, e.size * 0.2);
+        ctx.lineTo(e.size * 0.2, e.size * 0.5);
+        ctx.lineTo(e.size * 0.5, e.size * 0.2);
+        ctx.stroke();
+        
+        ctx.restore();
     });
 
-    // Draw Damage Texts
-    ctx.font = '12px monospace';
+    // 4. Draw Projectiles (4 Shapes: Outer Aura, Core, Horizontal Spike, Vertical Spike)
+    projectiles.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle); // Rotate to face direction of travel
+        
+        // Shape 1: Outer Aura Glow
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
+        ctx.beginPath(); ctx.arc(0, 0, stats.bulletSize * 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Shape 2: Solid Core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(0, 0, stats.bulletSize * 0.7, 0, Math.PI * 2); ctx.fill();
+        
+        // Shape 3 & 4: Energy Spikes (Cross shape)
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-stats.bulletSize * 2, 0); ctx.lineTo(stats.bulletSize * 2, 0); ctx.stroke(); // Horizontal
+        ctx.beginPath(); ctx.moveTo(0, -stats.bulletSize * 2); ctx.lineTo(0, stats.bulletSize * 2); ctx.stroke(); // Vertical
+        
+        ctx.restore();
+    });
+
+    // Draw Damage Texts (Remains standard text)
+    ctx.font = 'bold 14px monospace';
     damageTexts.forEach(dt => {
         ctx.fillStyle = `rgba(255, 255, 255, ${dt.alpha})`;
-        ctx.fillText(dt.text, dt.x, dt.y);
+        // Small shadow for legibility
+        ctx.shadowColor = "black";
+        ctx.shadowBlur = 4;
+        ctx.fillText(dt.text, dt.x - 5, dt.y);
+        ctx.shadowBlur = 0; // reset
     });
 }
 
